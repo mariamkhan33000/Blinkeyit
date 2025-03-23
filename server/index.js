@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import helmet from 'helmet'
 import connectedDb from './config/db.js';
 import cookieParser from 'cookie-parser';
+import userRouter from './route/userRoutes.js';
 dotenv.config()
 
 const PORT = process.env.PORT || 4001;
@@ -20,6 +21,9 @@ app.use(cors({
 app.use(helmet({
     crossOriginEmbedderPolicy : false
 }))
+
+
+app.use('/api/user', userRouter)
 
 
 app.listen(PORT, () => {
