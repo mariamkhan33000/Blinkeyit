@@ -5,6 +5,9 @@ import verifyEmailTemplate from "../utils/verificationEmailTemplate.js";
 import generatedAccessToken from "../utils/generatedAccessToken.js";
 import genertedRefreshToken from "../utils/genertedRefreshToken.js";
 import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
+import generatedOtp from "../utils/generatedOtp.js";
+import forgotPasswordTemplate from "../utils/forgotPasswordTemplate.js";
+import jwt from 'jsonwebtoken'
 
 export const registerUser = async (req, res) => {
     try {
@@ -187,5 +190,187 @@ export const updateUserDetails = async (req, res) => {
 
     } catch (error) {
         return res.status(500).json({message : error.message || error , error : true , success : false})
+    }
+}
+
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body; // ✅ Extract email correctly
+
+        // Check if the user exists
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(400).json({
+                message: "Email not found",
+                error: true,
+                success: false
+            });
+        }
+
+        // Generate OTP
+        const otp = generatedOtp();
+        
+        // Set expiry time for OTP (1 hour from now)
+        const expiryTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+        // Update user with OTP and expiry
+        await userModel.findByIdAndUpdate(
+            user._id,
+            {
+                forgot_password_otp: otp,
+                forgot_password_expiry: expiryTime
+            },
+            { new: true }
+        );
+
+        // Send email with OTP
+        try {
+            await sendEmail({
+                sendTo: email,
+                subject: "Forgot Password - Binkeyit",
+                html: forgotPasswordTemplate({
+                    name: user.name,
+                    otp: otp
+                })
+            });
+        } catch (emailError) {
+            return res.status(500).json({
+                message: "Failed to send email",
+                error: true,
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: "Check your email for the OTP",
+            error: false,
+            success: true
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            error: true,
+            success: false
+        });
+    }
+};
+
+
+export const  verifyForgotPasswordOtp = async (req, res) => {
+   try {
+    const { email, otp} = req.body;
+    if(!email || !password) {
+        return res.status(400).json({message : 'Provide required field email, otp.', error : true, success: false})
+    }
+    const user = await userModel.findOne({ email})
+
+    if(!user) {
+        return res.status(400).json({message : 'Email is not available', error : true, success : false})
+    }
+
+    const currentTime = new Date().toISOString()
+    if(user.forgot_password_expiry < currentTime) {
+        return res.status(400).json({message : 'Otp is expired', error : true, success : false})
+    }
+
+    if(otp !== user.forgot_password_otp) {
+        return res.status(400).json({message : 'Invalid Otp', error : true, success : false})
+    }
+
+    // If otp is not expire
+    // otp === user.forgot_password_otp
+
+    const updateUser = await userModel.findByIdAndUpdate(user?._id, {
+        forgot_password_expiry : "",
+        forgot_password_otp : ""
+    })
+
+    return res.status(200).json({message : 'Verify Otp is Successfully', error : false, success : true})
+   } catch (error) {
+    return res.status(500).json({message : error.message || error,  error : true, success : false})
+   }
+}
+
+// reset the Password
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, newPassword, confirmPassword} = req.body;
+
+        if(!email || !newPassword ||  !confirmPassword) {
+            return res.status(400).json({message : 'Provide Required field', error : true, success : false})
+        }
+
+        const user = await userModel.findOne({ email })
+        if(!user) {
+            return res.status(400).json({message : 'email not found', error : true, success : false})
+        }
+
+        if(newPassword !== confirmPassword) {
+            return res.status(400).json({message : 'Password Must Match', error : true, success : false})
+        }
+
+        const salt = await bcrypt.genSalt(10)
+        const hashPassword = await bcrypt.hash(newPassword, salt)
+        
+        const update = await userModel.findByIdAndUpdate(user._id, {
+            password : hashPassword
+        })
+
+        return res.status(200).json({message : 'Password Update Successfully', error : false, success : true})
+    } catch (error) {
+        return res.status(500).json({message : error.message || error,  error : true, success : false})
+    }
+}
+
+export const refreshToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken || req?.header?.authorization?.split(" ")[1] // Bearer Token
+
+    if(!refreshToken) {
+        return res.status(400).json({message : 'Invalid Token', error : true, success : false})
+    }
+
+    const verifyToken = await jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN)
+
+    if(!verifyToken) {
+        return res.status(400).json({message : 'Token Not Verfied', error : true, success : false})
+    }
+    
+    const userId = verifyToken?._id
+
+    const newAccessToken = await generatedAccessToken(userId)
+
+    const cookiesOption = {
+        httpOnly : true,
+        secure : true,
+        sameSite: None
+    }
+
+    res.cookie('accessToken', newAccessToken, cookiesOption)
+
+    return res.status(200).json({message : 'New Access Token', error : false, success : true, data : {
+        accessToken : newAccessToken
+    }})
+    } catch (error) {
+        return res.status(500).json({message : error.message || error,  error : true, success : false})
+    }
+}
+
+// get login user details
+
+export const userDetails = async (req, res) => {
+    try {
+        const userId = req.userId
+
+        console.log(userId)
+
+        const user = await userModel.findById(userId).select('-password -refresh_token')
+
+        res.status(200).json({message: "User Details", error : false, success : true})
+    } catch (error) {
+        return res.status(500).json({message : error.message || error,  error : true, success : false})
     }
 }
