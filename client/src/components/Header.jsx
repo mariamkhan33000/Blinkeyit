@@ -1,18 +1,25 @@
 import React from "react";
 import logo from "../assets/logo.png";
 import Search from "./Search";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaRegCircleUser } from "react-icons/fa6";
 import useMobile from "../hooks/useMobile";
+import { IoCartOutline } from "react-icons/io5";
+
 
 const Header = () => {
   const isMobile = useMobile(); // ✅ Detects if screen width < 768px
   const location = useLocation(); // ✅ Gets the current route
+  const navigate = useNavigate()
+
+  const redirectToLoginPage = () => {
+    navigate("/login")
+  }
 
   const isSearchPage = location.pathname === "/search"; // ✅ Checks if the current page is '/search'
 
   return (
-    <header className="h-24 lg:h-20 lg:shadow-md sticky top-0  flex flex-col justify-center gap-1">
+    <header className="h-24 lg:h-20 lg:shadow-md sticky top-0  flex flex-col justify-center gap-1 bg-white">
       
       {/* Hide Header when on Search Page (Mobile Only) */}
       {!(isSearchPage && isMobile) && (
@@ -44,11 +51,27 @@ const Header = () => {
           </div>
 
           {/* Login and Cart Button */}
-          <div>
+          <div className="">
+            {/* User icons display in only mobile version */}
+
             <button className="text-neutral-500 lg:hidden">
               <FaRegCircleUser size={26} />
             </button>
-            <div className="hidden lg:block">Login & My Cart</div>
+
+
+            {/* Desktop  */}
+            <div className="hidden lg:flex items-center gap-10">
+              <button onClick={redirectToLoginPage} className="text-lg px-2">Login</button>
+              <button className="flex items-center gap-2 bg-green-700 hover:bg-green-800 px-3 py-2 rounded text-white">
+                {/* add to cart item */}
+                <div className="animate-bounce">
+                <IoCartOutline size={26}/>
+                </div>
+                <div className="font-semibold">
+                  <p>My Cart</p>
+                </div>
+              </button>
+            </div>
           </div>
 
         </div>
