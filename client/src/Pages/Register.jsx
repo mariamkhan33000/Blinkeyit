@@ -1,5 +1,12 @@
 import React, { useState } from 'react'
 import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa'
+import toast from 'react-hot-toast'
+import axios from 'axios'
+import Axios from '../utils/Axios'
+
+import SummaryApi from '../common/SummaryApi'
+import { Link, useNavigate } from 'react-router-dom'
+import AxiosToastError from '../utils/AxiosToastError'
 
 const Register = () => {
 
@@ -12,6 +19,7 @@ const Register = () => {
 
     const [showPassword, setShowPassword] = useState(false)
     const [confirmShowPassword, setConfirmShowPassword] = useState(false)
+    const navigate = useNavigate()
 
     const handleChange = (e) => {
         const {name, value} = e.target
@@ -26,8 +34,36 @@ const Register = () => {
     const valideValue = Object.values(data).every(el => el)
 
 
-    const handleOnSubmit = (e) => {
+    const handleOnSubmit = async (e) => {
         e.preventDefault()
+        if(data.password !== data.confirmPassword) {
+            toast.error("Password and confirm Password must be same")
+            return
+        }
+
+        try {
+            const response = await Axios({
+                ...SummaryApi.register ,
+                data : data
+            })
+
+            if(response.data.error) {
+                toast.error(response.data.message)
+            }
+
+            if(response.data.success) {
+                toast.success(response.data.message)
+                setData({
+                    name: "",
+                    email : "",
+                    password : "",
+                    confirmPassword : ""
+                })
+                navigate("/login")
+            }
+        } catch (error) {
+            AxiosToastError(error)
+        }
     }
   return (
     <section className='w-full container mx-auto px-2'>
@@ -71,9 +107,12 @@ const Register = () => {
                 </div>
             </div>
 
-            <button className={` ${valideValue ? "bg-green-800" : "bg-gray-500"}  text-white py-2 rounded font-semibold cursor-pointer hover:bg-green-900 my-3 tracking-wide `}>Register</button>
+            <button disabled={!valideValue} className={` ${valideValue ? "bg-green-800" : "bg-gray-500"}  text-white py-2 rounded font-semibold cursor-pointer hover:bg-green-900 my-3 tracking-wide `}>Register</button>
 
         </form>
+        <p>
+            Already have account ? <Link to={'/login'} className='font-semibold text-green-700 hover:text-green-800'>Login</Link>
+        </p>
         </div>
         
     </section>
