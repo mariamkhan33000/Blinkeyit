@@ -5,12 +5,16 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaRegCircleUser } from "react-icons/fa6";
 import useMobile from "../hooks/useMobile";
 import { IoCartOutline } from "react-icons/io5";
+import { useSelector } from 'react-redux'
+import { GoTriangleDown, GoTriangleUp  } from "react-icons/go";
 
 
 const Header = () => {
   const isMobile = useMobile(); // ✅ Detects if screen width < 768px
   const location = useLocation(); // ✅ Gets the current route
   const navigate = useNavigate()
+  const user = useSelector((state) => state?.user)
+  console.log('user from store', user)
 
   const redirectToLoginPage = () => {
     navigate("/login")
@@ -61,7 +65,21 @@ const Header = () => {
 
             {/* Desktop  */}
             <div className="hidden lg:flex items-center gap-10">
-              <button onClick={redirectToLoginPage} className="text-lg px-2">Login</button>
+
+              {
+                user?._id ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p>Account</p>
+                      <GoTriangleDown/>
+                      {/* <GoTriangleUp/> */}
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={redirectToLoginPage} className="text-lg px-2">Login</button>
+                )
+              }
+              
               <button className="flex items-center gap-2 bg-green-700 hover:bg-green-800 px-3 py-2 rounded text-white">
                 {/* add to cart item */}
                 <div className="animate-bounce">
